@@ -1,6 +1,9 @@
-from models import ChatMessage, ChatHistory
+from models import ChatMessage, ChatHistory, ChatMetadata
 import dspy
 from lms.together import Together
+from examples_loader import load_examples
+
+from datetime import datetime
 
 from modules.chatter import ChatterModule
 
@@ -18,7 +21,9 @@ lm = Together(
 dspy.settings.configure(lm=lm)
 
 chat_history = ChatHistory()
-chatter = ChatterModule(examples=None)
+chat_metadata = ChatMetadata()
+chatter = ChatterModule(examples=load_examples())
+chatter.optimize()  # KNNFewShot optimizer for the Responder module
 while True:
     # Get user input
     user_input = input("You: ")
@@ -28,17 +33,19 @@ while True:
         ChatMessage(
             from_creator=False,
             content=user_input,
+            sent_at=datetime.now()
         ),
     )
 
     # Send request to endpoint
-    response = chatter(chat_history=chat_history).output
+    response = chatter(chat_metadata=chat_metadata, chat_history=chat_history).output
 
     # Append response to chat history
     chat_history.messages.append(
         ChatMessage(
             from_creator=True,
             content=response,
+            sent_at=datetime.now()
         ),
     )
     # Print response
@@ -46,4 +53,4 @@ while True:
     print("Response:", response)
     print()
     # uncomment this line to see the 
-    # lm.inspect_history(n=1)
+    # lm.inspect_history(n=5)
